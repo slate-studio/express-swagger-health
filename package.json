@@ -1,0 +1,28 @@
+{
+  "name": "express-swagger-health",
+  "version": "0.0.1",
+  "description": "Health endpoint check helper with options check swagger versions and slack notifications",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DenisPopov15/express-swagger-health.git"
+  },
+  "keywords": [
+    "express",
+    "swagger",
+    "health",
+    "slack"
+  ],
+  "author": "Denis Popov",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DenisPopov15/express-swagger-health/issues"
+  },
+  "homepage": "https://github.com/DenisPopov15/express-swagger-health#readme",
+  "dependencies": {
+    "request": "^2.79.0"
+  }
+}
