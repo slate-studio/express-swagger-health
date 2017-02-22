@@ -1,69 +1,74 @@
-# Express Swagger Helath
+# Express Swagger Health
 
-Health endpoint checker helper with option check swagger spec versions and slack notifications for Express
+Health endpoint checker helper for Express that validates dependant swagger
+schema version against the mocked one and send notification to slack if there
+is an inconsistency.
 
-## Usage
 
+## Configuration
 
-Mimimum setup:
+Example below relies on `config` variables as follow:
 
+```yaml
+app:
+  name: service-name
+slack:
+  token: xoxp-**********-5111332199-11970959559-**********
+  channel: XXXOOOYYY
 ```
+
+Feel free to adjust them for your convenience.
+
+
+## Example
+
+```javascript
 const health = require('express-swagger-health')
-const healthParams = {
-    name: 'microservice',
-    version: '1.0.0'
-}
-
-app.get('/health', health(healthParams) )
-```
-
-This will return status 200 with 
-
-```
-{'name':'microservice','version':'1.0.0','status':'ok'}
-```
-
-
-Full setup:
-
-```
-const healthParams = {
-    name: 'microservice',
-    version: '1.0.0',
-    swaggerCheck: {
-        swaggerSchemaUri: 'http://service_with_swagger_spec_using.com',
-        swaggerMockSpec: 'swaggerSpecWithTestUsing.json'
+const healthOptions = {
+  name: C.app.name,
+  version: require('../package.json').version,
+  slack: C.slack,
+  apis: [
+    {
+      name: 'api1',
+      uri: C.app.api1SwaggerUri,
+      localSchema: require('../test/factories/api1Swagger.json')
     },
-    slack: {
-        token: 'slackToken',
-        channel: 'slackChannelID',
-        iconUrl: 'http://example.com/ava.jpg'
+    {
+      name: 'api2',
+      uri: C.app.api2SwaggerUri,
+      localSchema: require('../test/factories/api2Swagger.json')
     }
+  ]
 }
 
-app.get('/health', health(healthParams) )
+app.get('/health', health(healthOptions) )
 ```
 
+Successful response:
 
-This will return status 200 with 
-
-```
-{'name':'microservice','version':'1.0.0','status':'ok'}
-```
-
-If server available and swagger schema mathch
-
-OR
-
-200 with 
-
-```
-{'name':'microservice','version':'1.0.0','status':'Swagger Versions Mistmatched'}
+```javascript
+{
+    'name': 'service-name',
+    'version': '1.0.0',
+    'status': 'ok',
+    'errors': []
+}
 ```
 
-and also will send notification to slack:
- 
-Swagger Versions Mismatched for microservice, tests run against swagger schema v.0.3.5, but actual api version of schema is: 0.3.8
+Failure response:
+
+```javascript
+{
+    'name': 'service-name',
+    'version': '1.0.0',
+    'status': 'error',
+    'errors': [
+        "api1: Swagger version mismatch, expected: v0.2.5, returned: v0.3.15",
+        "api2: Swagger version mismatch, expected: v0.3.5, returned: v0.3.11"
+    ]
+}
+```
 
 
 Slate Studio @ 2017

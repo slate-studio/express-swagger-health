@@ -1,61 +1,81 @@
 'use strict'
 
-const request  = require('request')
+const request = require('request')
 
-const health = (options) => {
+const sendSlackNotification = (options, errors) => {
+  const slack = options.slack
+  const name = options.name
 
-  const response = (res, appName, appVersion, status) => {
-    res.setHeader('Content-Type', 'application/json')
-    const data = {
-      name:    appName,
-      version: appVersion,
-      status:  status
-    }
-    return res.status(200).json(data)
-  }
+  if (slack) {
+    const endpoint = 'https://slack.com/api/chat.postMessage'
+    const t = slack.token
+    const c = slack.channel
+    const u = name
+    const i = 'https://avatars1.githubusercontent.com/u/6334870?v=3&s=70'
+    const l = 'D00000'
+    const m = errors.join("\n")
 
-  return function (req, res, next) {
-
-    var status       = 'ok'
-    const appName    = options.name
-    const appVersion = options.version
-
-    var sendSlacNotification = false
-    options = options || {}
-
-    if (options.hasOwnProperty('swaggerCheck')) {
-      const swaggerCheck = options.swaggerCheck
-      const swaggerSchemaUri = swaggerCheck.swaggerSchemaUri
-      const swaggerMockSpec = swaggerCheck.swaggerMockSpec
-      const mockedSwaggerVersion = swaggerMockSpec.info.version
-      request
-        .get(swaggerSchemaUri, function(error, swaggerRes, body) {
-          const actualSwaggerVersion = JSON.parse(body).info.version
-          if (mockedSwaggerVersion != actualSwaggerVersion ) {
-            status = 'Swagger Versions Mistmatched'
-            if (options.hasOwnProperty('slack')) {
-              const slack    = options.slack
-              const token    = slack.token
-              const channel  = slack.channel
-              const iconUrl  = slack.iconUrl
-              const color    = 'D00000'
-              const userName = 'Regression test'
-              const errorMessage = `Swagger Versions Mismatched for ${appName}, tests run against swagger schema v.${mockedSwaggerVersion}, but actual api version of schema is: ${actualSwaggerVersion}`
-              var slackUri = `https://slack.com/api/chat.postMessage?token=${token}&channel=${channel}&text=&username=${userName}&attachments=%5B%7B%22color%22%3A%20%22%23${color}%22%2C%20%22text%22%3A%20%22${errorMessage}%22%7D%5D&icon_url=${iconUrl}&pretty=1`
-              request.get(slackUri)
-              response(res, appName, appVersion, status)
-            } else {
-              response(res, appName, appVersion, status)
-            }
-          } else {
-            response(res, appName, appVersion, status)
-          }
-        })
-    } else {
-      response(res, appName, appVersion, status)
-    }
+    const url = `${endpoint}?token=${t}&channel=${c}&text=&username=${u}&attachments=%5B%7B%22color%22%3A%20%22%23${l}%22%2C%20%22text%22%3A%20%22${m}%22%7D%5D&icon_url=${i}&pretty=1`
+    request.get(url)
   }
 }
 
+const response = (res, options, errors) => {
+  var status = 'ok'
+  if (errors.length > 0) {
+    status = 'error'
+    sendSlackNotification(options, errors)
+  }
 
-module.exports = health
+  return res.status(200).json({
+    name: options.name,
+    version: options.version,
+    status: status,
+    errors: errors
+  })
+}
+
+const validateSwaggerSchemaVersion = (apiOptions) => {
+  return new Promise((resolve, reject) => {
+    const name = apiOptions.name
+    const localSchema = apiOptions.localSchema
+    const uri = apiOptions.uri
+
+    request
+      .get(uri, (error, res, body) => {
+        if (error) {
+          return resolve(error)
+        }
+
+        const remoteSchema = JSON.parse(body)
+        const localVersion = localSchema.info.version
+        const remoteVersion = remoteSchema.info.version
+        if (localVersion != remoteVersion) {
+          return resolve(`${name}: Swagger version mismatch, expected: v${localVersion}, returned: v${remoteVersion}`)
+        }
+
+        resolve()
+      })
+  })
+}
+
+const checkHealth = (options) => {
+  return (req, res, next) => {
+
+    var errors = []
+    var counter = 0
+    options.apis.forEach((value) => {
+      validateSwaggerSchemaVersion(value).then((validationError) => {
+        counter += 1
+
+        if (validationError)
+          errors.push(validationError)
+
+        if (options.apis.length == counter)
+          response(res, options, errors)
+      })
+    })
+  }
+}
+
+module.exports = checkHealth
