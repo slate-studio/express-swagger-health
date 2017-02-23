@@ -66,9 +66,13 @@ const validateSwaggerSchemaVersion = (apiOptions) => {
 
 const checkHealth = (options) => {
   return (req, res, next) => {
-
     var errors = []
     var counter = 0
+
+    if (options.apis.length == 0) {
+      return response(res, options, errors)
+    }
+
     options.apis.forEach((value) => {
       validateSwaggerSchemaVersion(value).then((validationError) => {
         counter += 1
