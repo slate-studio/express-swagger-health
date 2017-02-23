@@ -1,6 +1,6 @@
 {
   "name": "express-swagger-health",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Health endpoint checker for Express with Swagger validation.",
   "main": "index.js",
   "scripts": {

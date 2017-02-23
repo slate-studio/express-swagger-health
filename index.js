@@ -41,6 +41,11 @@ const validateSwaggerSchemaVersion = (apiOptions) => {
     const localSchema = apiOptions.localSchema
     const uri = apiOptions.uri
 
+    const clientGlobalName = apiOptions.globalName
+    if (!global[clientGlobalName]) {
+      return resolve(`${name}: Swagger schema is unreachable`)
+    }
+
     request
       .get(uri, (error, res, body) => {
         if (error) {
